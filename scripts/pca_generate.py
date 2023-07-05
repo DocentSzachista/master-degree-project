@@ -1,12 +1,12 @@
 import argparse
-from os import makedirs
+from os import makedirs, path 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 import re
 
-labels = {
+LABELS_CIFAR_10 = {
     0: "airplane",
     1: "automobile",
     2: "bird",
@@ -20,22 +20,22 @@ labels = {
 }
 
 
-def prepare_script() -> tuple(argparse.Namespace, str):
+def prepare_script() -> (argparse.Namespace, str):
     parser = argparse.ArgumentParser(
         description="Script to visualize distribution of classifiers."
     )
     parser.add_argument(
         "-f", "--file", required=True, help="input file. Should be pickle."
     )
-    parser.add_argument("-o", "--output", required=True, help="output dir destination.")
+    parser.add_argument("-o", "--output", required=True, help="Dir to save generated file")
     args = parser.parse_args()
-    makedirs("../out/", exist_ok=True)
     output_title = re.findall(r"\w+\.", args.file)
 
     return args, output_title[0]
 
 
-def make_visualization(df: pd.DataFrame, labels: dict, save_dir: str | None = False)->None:
+def make_visualization(df: pd.DataFrame, labels: dict, plot_title: str,
+                       save_dir: str | None = None) -> None:
     """Visualize PCA
 
     Draw model's class distribution on a scatter plot.
@@ -53,7 +53,7 @@ def make_visualization(df: pd.DataFrame, labels: dict, save_dir: str | None = Fa
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel("PCA 1", fontsize=15)
     ax.set_ylabel("PCA 2", fontsize=15)
-    ax.set_title("2 component PCA", fontsize=20)
+    ax.set_title(plot_title, fontsize=20)
 
     for label in labels.keys():
         indices_to_keep = df["original_label"] == label
@@ -62,6 +62,8 @@ def make_visualization(df: pd.DataFrame, labels: dict, save_dir: str | None = Fa
     ax.grid()
     if save_dir:
         plt.savefig(save_dir)
+    else:
+        plt.plot()
 
 
 def prepare_pca(dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -87,10 +89,31 @@ def prepare_pca(dataframe: pd.DataFrame) -> pd.DataFrame:
     return final_df
 
 
+def run(input_dataframe_path: str, plot_title: str,
+        labels: dict | None = LABELS_CIFAR_10,
+        output_path: str | None = None) -> None:
+    """Util function to run PCA generation
+    
+    Parameters
+    ----------
+    input_dataframe_path: str
+        Path to pickle file
+    plot_title: str
+        Name of generated plot
+    labels: dict, optional
+        Labels describing keys in the dataframe. If not provided it will use CIFAR_10 labels
+    output_file: str, optional
+        Directory to the file where it should save plot.
+    """    
+    dataframe = pd.read_pickle(input_dataframe_path)
+    PCA_df = prepare_pca(dataframe)
+    make_visualization(PCA_df, labels, plot_title, output_path)
+
+
 if __name__ == "__main__":
     args, output_title = prepare_script()
-    # "../dataframes/test_cifar10.pickle"
     df_test = pd.read_pickle(args.file)
 
     PCA_df = prepare_pca(df_test)
-    make_visualization(PCA_df, labels, f"../out/{output_title}_pca.png")
+    make_visualization(PCA_df, LABELS_CIFAR_10, output_title, 
+                       f"{args.output}/{output_title}.png")
