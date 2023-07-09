@@ -25,11 +25,14 @@ def prepare_script() -> (argparse.Namespace, str):
         description="Script to visualize distribution of classifiers."
     )
     parser.add_argument(
-        "-f", "--file", required=True, help="input file. Should be pickle."
+        "--train_file", required=True, help="Location of train pickle dataset."
+    )
+    parser.add_argument(
+        "--test_file", required=False, help="location of test pickle dataset."
     )
     parser.add_argument("-o", "--output", required=True, help="Dir to save generated file")
     args = parser.parse_args()
-    output_title = re.findall(r"\w+\.", args.file)
+    output_title = re.findall(r"\w+\.", args.train_file)
 
     return args, output_title[0]
 
@@ -66,34 +69,44 @@ def make_visualization(df: pd.DataFrame, labels: dict, plot_title: str,
         plt.plot()
 
 
-def prepare_pca(dataframe: pd.DataFrame) -> pd.DataFrame:
+def prepare_pca(dataframe_train: pd.DataFrame,
+                dataframe_test: pd.DataFrame | None = None) -> pd.DataFrame:
     """Prepare dataset for PCA visualization.
 
     Make dimension reduction to 2D by using PCA algorithm.
 
     Parameters
     -----
-    dataframe: DataFrame
-        Dataframe, that holds features and labels of deep learning model.
+    dataframe_train: DataFrame
+        Dataframe, that holds features and labels of deep learning model used to train PCA.
+    dataframe_test: Dataframe, optional
+        Dataframe holding test features, if not provided, function uses train data to transform features.
     Returns
     -------
     Dataframe containing original labels and reduced dimensions of features.
 
     """
     pca = PCA(n_components=2)
-    features = np.vstack(dataframe.features.values)
-    X_reduced = pca.fit_transform(features)
+    train_features = np.vstack(dataframe_train.features.values)
+    if dataframe_test is not None:
+        test_features = np.vstack(dataframe_test.features.values)
+        labels = dataframe_test.original_label
+    else:
+        test_features = train_features
+        labels = dataframe_train.original_label
+    pca.fit(train_features)
+    X_reduced = pca.transform(test_features)
     df = pd.DataFrame(X_reduced, columns=["PC1", "PC2"])
-    final_df = pd.concat([df, dataframe.original_label], axis=1)
-    print(final_df.original_label.value_counts())
+    final_df = pd.concat([df, labels], axis=1)
     return final_df
 
 
-def run(input_dataframe_path: str, plot_title: str,
+def run(train_input_dataframe_path: str, plot_title: str,
+        test_input_dataframe_path: str | None = None,
         labels: dict | None = LABELS_CIFAR_10,
         output_path: str | None = None) -> None:
     """Util function to run PCA generation
-    
+
     Parameters
     ----------
     input_dataframe_path: str
@@ -105,15 +118,23 @@ def run(input_dataframe_path: str, plot_title: str,
     output_file: str, optional
         Directory to the file where it should save plot.
     """    
-    dataframe = pd.read_pickle(input_dataframe_path)
-    PCA_df = prepare_pca(dataframe)
+    train_dataframe = pd.read_pickle(train_input_dataframe_path)
+    if test_input_dataframe_path is None:
+        PCA_df = prepare_pca(train_dataframe)
+    else:
+        test_df = pd.read_pickle(test_input_dataframe_path)
+        PCA_DF = prepare_pca(train_dataframe, test_df)
     make_visualization(PCA_df, labels, plot_title, output_path)
 
 
 if __name__ == "__main__":
     args, output_title = prepare_script()
-    df_test = pd.read_pickle(args.file)
+    df_train = pd.read_pickle(args.train_file)
+    if args.test_file is not None: 
+        df_test = pd.read_pickle(args.test_file)
+    else: 
+        df_test = df_train
 
-    PCA_df = prepare_pca(df_test)
+    PCA_df = prepare_pca(df_train, df_test)
     make_visualization(PCA_df, LABELS_CIFAR_10, output_title, 
                        f"{args.output}/{output_title}.png")
