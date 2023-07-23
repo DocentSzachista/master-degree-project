@@ -192,7 +192,8 @@ if __name__ == "__main__":
     #                    f"{args.output}/{output_title}.png")
     (_, axis) = generate_pca_scatter_plot(PCA_df, LABELS_CIFAR_10, output_title)
 
-    points = pick_chosen_label(df_test, 4)
+    points = pick_chosen_label(df_test, 4).head(5)
+    points.to_csv("./cokolwiek.csv")
     mark_chosen_datapoints(axis, pca, points.head(5))
     plt.savefig(f"{args.output}/{output_title}_test_pca.png")
 
