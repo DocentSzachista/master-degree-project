@@ -61,7 +61,7 @@ def generate_pca_scatter_plot(
     -------
     Figure and Axes objects.
     """
-    fig = plt.figure(figsize=(8, 8))
+    fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel("PCA 1", fontsize=15)
     ax.set_ylabel("PCA 2", fontsize=15)
@@ -74,7 +74,7 @@ def generate_pca_scatter_plot(
             df.loc[indices_to_keep, "PC2"],
             label=labels[label],
             s=50,
-            c=color
+            c=color,
         )
     ax.legend()
     ax.grid()
@@ -99,10 +99,17 @@ def mark_chosen_datapoints(
     --------
     Modified Axes object.
     """
+    values = points_dataframe.noise_rate.values
+    predicted_class = points_dataframe.predicted_label.values
     features = np.vstack(points_dataframe.features.values)
     reduced_X = pca.transform(features)
     df = pd.DataFrame(reduced_X, columns=["PC1", "PC2"])
     axis.scatter(df.loc[:, "PC1"], df.loc[:, "PC2"], s=100, marker="x", c="k")
+    for i, row in df.iterrows():
+        axis.annotate(
+            f"{values[i]}% : {predicted_class[i]}",
+            (row["PC1"], row["PC2"]),
+        )
     return axis
 
 
@@ -169,13 +176,13 @@ def run(
         PCA_df = prepare_pca(train_dataframe)
     else:
         test_df = pd.read_pickle(test_input_dataframe_path)
-        PCA_df = prepare_pca(train_dataframe, test_df)
+        PCA_df, pca = prepare_pca(train_dataframe, test_df)
     fig, axis = generate_pca_scatter_plot(PCA_df, labels, plot_title)
     if picked_datapoints is not None:
-        mark_chosen_datapoints(axis, PCA_df, picked_datapoints)
+        mark_chosen_datapoints(axis, pca, picked_datapoints)
     if output_path is None:
         plt.show()
-    else: 
+    else:
         plt.savefig(output_path)
 
 
@@ -187,13 +194,12 @@ if __name__ == "__main__":
     else:
         df_test = df_train
 
-    PCA_df, pca = prepare_pca(df_train, df_test)
-    # make_visualization(PCA_df, LABELS_CIFAR_10, output_title,
-    #                    f"{args.output}/{output_title}.png")
-    (_, axis) = generate_pca_scatter_plot(PCA_df, LABELS_CIFAR_10, output_title)
+    # PCA_df, pca = prepare_pca(df_train, df_test)
+    # # make_visualization(PCA_df, LABELS_CIFAR_10, output_title,
+    # #                    f"{args.output}/{output_title}.png")
+    # (_, axis) = generate_pca_scatter_plot(PCA_df, LABELS_CIFAR_10, output_title)
 
     points = pick_chosen_label(df_test, 4).head(5)
-    points.to_csv("./cokolwiek.csv")
-    mark_chosen_datapoints(axis, pca, points.head(5))
-    plt.savefig(f"{args.output}/{output_title}_test_pca.png")
-
+    points.to_pickle("./class_4.pickle")  # nie pisać tego do csv i będzie git
+    # mark_chosen_datapoints(axis, pca, points.head(5))
+    # plt.savefig(f"{args.output}/{output_title}_test_pca.png")
