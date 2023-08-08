@@ -1,6 +1,7 @@
-import random
-import torch
 import copy
+import random
+
+import torch
 
 
 def create_and_shuffle_indexes(matrix_shape: tuple):

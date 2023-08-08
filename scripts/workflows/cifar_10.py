@@ -1,18 +1,16 @@
-import torchvision
-import torch
-from albumentations.pytorch import ToTensorV2
-import albumentations as A
-
-import numpy as np
 import random
+
+import albumentations as A
+import numpy as np
 import pandas as pd
-from augumentations.noise_creation import (
-    apply_noise_to_image,
-    generate_mask,
-    create_and_shuffle_indexes,
-)
-from augumentations.mixup import mixup_criterion
+import torch
+import torchvision
 import workflows.utils as utils
+from albumentations.pytorch import ToTensorV2
+from augumentations.mixup import mixup_criterion
+from augumentations.noise_creation import (apply_noise_to_image,
+                                           create_and_shuffle_indexes,
+                                           generate_mask)
 from models import resnet_cifar_10
 
 columns = [

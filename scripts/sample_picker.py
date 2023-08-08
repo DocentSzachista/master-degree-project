@@ -1,5 +1,6 @@
+import numpy as np
 import pandas as pd
-import numpy as np 
+
 
 def pick_chosen_label(dataframe: pd.DataFrame, label: int) -> pd.DataFrame:
     """ Pick chosen label sorted descending.   

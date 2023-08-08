@@ -1,12 +1,13 @@
 import argparse
+import re
 from os import makedirs, path
+
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
-import re
 from sample_picker import pick_chosen_label
-import matplotlib.colors as mcolors
+from sklearn.decomposition import PCA
 
 LABELS_CIFAR_10 = {
     0: "airplane",
