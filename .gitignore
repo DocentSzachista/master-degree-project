@@ -6,6 +6,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# ignore model files 
+*.ckpt 
 # C extensions
 *.so
 

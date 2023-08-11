@@ -1,0 +1,23 @@
+{
+    "model": "resnet",
+    "model_g_drive": "1YSs2XjzvAM_0ZbttiznTDo7GUdCX1erK",
+    "augumentations": [
+        {
+            "name": "noise",
+            "start_point": 0,
+            "finish_point": 1024,
+            "step": 5,
+            "apply_random_on_each": false
+        },
+        {
+            "name": "mixup",
+            "start_point": 0,
+            "finish_point": 1,
+            "step": 0.01,
+            "images_indexes": "./class_4.pickle"
+        }
+    ],
+    "dataset": "cifar_10",
+    "image_dim": [3, 32, 32],
+    "save_preprocessing": false
+}

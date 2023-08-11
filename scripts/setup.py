@@ -1,8 +1,9 @@
 import json
 import pathlib
 from datetime import datetime
+import pandas as pd
 from enum import Enum
-
+import torch
 import gdown
 import torchvision
 from albumentations.pytorch import ToTensorV2
@@ -14,6 +15,7 @@ from .augumentations import noise_creation
 from .models import resnet_cifar_10
 import matplotlib.pyplot as plt  
 from torchvision.utils import save_image
+from .workflows.cifar_10 import get_features
 
 class SupportedModels(Enum):
     RESNET = "resnet"
@@ -83,6 +85,8 @@ class Setup:
         
         self.mask = noise_creation.generate_mask((3, 32, 32))
         self.shuffled_indexes = noise_creation.create_and_shuffle_indexes((32, 32))
+        self.columns = ["id", "original_label", "predicted_label", "noise_rate", "classifier", "features"]
+
  
 
     def create_directories(self):
@@ -137,7 +141,43 @@ class Setup:
         else: 
             raise TypeError("Provided options are not supported")
         
-        return NoisedDataset(listing, labels)
+        return listing, labels
         
     def _make_image(self, image: Tensor, image_name: str) -> None:
         save_image(image, image_name)
+
+
+    def save_results(self, data: dict, options: BaseAugumentation):
+        for key, values in data.items():
+            df = pd.DataFrame(values, columns=self.columns)
+            df.to_pickle(f"./{self.config.model.value}/{options.name}/{self.formatted_time}/dataframes/id_{key}.pickle")
+
+
+converter = lambda tensor: tensor.detach().cpu().numpy()
+
+class Worker: 
+
+    @staticmethod
+    def test_model_data_loader(model, images: list, labels: list, mask_intensity: int, storage: dict):
+
+        index = 0
+        with torch.no_grad():
+            for image, label in zip(images, labels):
+                image = image.cuda().unsqueeze(0)
+                logits = model(image)
+                features = get_features(model._modules["1"], image)
+                _, predicted = torch.max(logits, 1)
+                
+                storage[index].append([
+                        index,  label,
+                        predicted.item(), 
+                        mask_intensity,
+                        converter(logits),
+                        converter(features)
+                    ])
+                index += 1
+    
+
+    @staticmethod
+    def test_model_single_images(model, images: list):
+        pass 

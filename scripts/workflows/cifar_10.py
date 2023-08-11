@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 import torch
 import torchvision
-import workflows.utils as utils
+from .utils import set_workstation
 from albumentations.pytorch import ToTensorV2
-from augumentations.mixup import mixup_criterion
-from augumentations.noise_creation import (apply_noise_to_image,
+from ..augumentations.mixup import mixup_criterion
+from ..augumentations.noise_creation import (apply_noise_to_image,
                                            create_and_shuffle_indexes,
                                            generate_mask)
-from models import resnet_cifar_10
+from ..models import resnet_cifar_10
 
 columns = [
     "id",
@@ -111,7 +111,7 @@ def retrieve_chosen_images_ids(filepath: str):
 ## TODO: ADD functions for data augumentation preparation and
 def start_workflow_noise(filepath: str):
     """Makes experiments with using mask noise size of ."""
-    utils.set_workstation("cuda:0")
+    set_workstation("cuda:0")
     model = resnet_cifar_10.prepare_resnet()
     chosen_images = retrieve_chosen_images_ids(filepath)
     mask = generate_mask((3, 32, 32))
@@ -139,7 +139,7 @@ def start_workflow_noise(filepath: str):
 
 
 def start_workflow_mixup(filepath: str, filepath_2: str):
-    utils.set_workstation("cuda:0")
+    set_workstation("cuda:0")
     model = resnet_cifar_10.prepare_resnet()
     chosen_images = retrieve_chosen_images_ids(filepath)
     chosen_mixed_images = retrieve_chosen_images_ids(filepath_2)
