@@ -10,7 +10,7 @@ __pycache__/
 *.ckpt 
 # C extensions
 *.so
-
+*.png
 # Distribution / packaging
 .Python
 build/

@@ -2,8 +2,6 @@ from scripts.setup import Setup, Worker
 from albumentations.pytorch import ToTensorV2
 import albumentations as A
 import numpy as np
-from torch.utils.data import DataLoader
-
 
 if __name__ == '__main__':
     
@@ -15,13 +13,17 @@ if __name__ == '__main__':
     ])
     preprocess = lambda x: transforms(image=np.array(x))["image"].float()/255.0
     cifar = setup.download_test_data(preprocess)
-    
-    storage = {k: [] for k in range(len(cifar))}
+    # part where chosen images are picked. 
+    if setup.config.chosen_images is not None:
+        images = [cifar[i][0] for i in setup.config.chosen_images]
+        labels = [cifar[i][1] for i in setup.config.chosen_images]
+        cifar.data = images
+        cifar.targets = labels
 
-    for rate in setup.config.augumentations[0].make_iterator():
-        images, labels = setup.modify_dataset(setup.config.augumentations[0], cifar, rate)
-        Worker.test_model_data_loader(model, images, labels, rate, storage)
-        break
-    setup.save_results(storage, setup.config.augumentations[0])
-
+    for augumentation in setup.config.augumentations:
+        storage = {k: [] for k in range(len(cifar))}
+        for rate in augumentation.make_iterator():
+            images, labels = setup.modify_dataset(augumentation, cifar, rate)
+            Worker.test_model_data_loader(model, images, labels, rate, storage)
+        setup.save_results(storage, augumentation)
 

@@ -1,6 +1,5 @@
 import copy
 import random
-
 import torch
 
 
@@ -25,6 +24,9 @@ def apply_noise_to_image(
     return image_copy
 
 
-def generate_mask(shape: tuple):
+def generate_mask(shape: tuple, channels: list):
     torch.manual_seed(0)
-    return torch.randn(shape)
+    temp = torch.zeros(shape)
+    for channel in channels:
+        temp[channel, :, :] = torch.randn(shape[1:])
+    return temp

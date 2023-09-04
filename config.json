@@ -1,20 +1,22 @@
 {
     "model": "resnet",
     "model_g_drive": "1YSs2XjzvAM_0ZbttiznTDo7GUdCX1erK",
+    "chosen_images": "./class_4.pickle",
     "augumentations": [
         {
             "name": "noise",
             "start_point": 0,
             "finish_point": 1024,
             "step": 5,
-            "apply_random_on_each": false
+            "apply_random_on_each_image": false,
+            "chosen_color_chanels": "RGB" 
         },
         {
             "name": "mixup",
             "start_point": 0,
             "finish_point": 1,
             "step": 0.01,
-            "images_indexes": "./class_4.pickle"
+            "chosen_image": "./airplane1.png"
         }
     ],
     "dataset": "cifar_10",
