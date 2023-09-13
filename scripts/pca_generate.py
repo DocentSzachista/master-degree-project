@@ -22,6 +22,8 @@ LABELS_CIFAR_10 = {
     9: "truck",
 }
 
+# TODO: Make
+
 
 def prepare_script() -> (argparse.Namespace, str):
     parser = argparse.ArgumentParser(
@@ -35,6 +37,9 @@ def prepare_script() -> (argparse.Namespace, str):
     )
     parser.add_argument(
         "-o", "--output", required=True, help="Dir to save generated file"
+    )
+    parser.add_argument(
+        "-pa", "--picked_datapoints", required=False, help="Location to marked datapoints file"
     )
     args = parser.parse_args()
     output_title = re.findall(r"\w+\.", args.train_file)
@@ -189,18 +194,11 @@ def run(
 
 if __name__ == "__main__":
     args, output_title = prepare_script()
-    df_train = pd.read_pickle(args.train_file)
-    if args.test_file is not None:
-        df_test = pd.read_pickle(args.test_file)
+    if args.picked_datapoints:
+        test = pd.read_pickle(args.picked_datapoints)
+        for i in test[["id"]].to_numpy():
+            run(args.train_file, output_title, args.test_file, test,
+                LABELS_CIFAR_10, f"{args.output_path}/marked_{i}")
     else:
-        df_test = df_train
-
-    # PCA_df, pca = prepare_pca(df_train, df_test)
-    # # make_visualization(PCA_df, LABELS_CIFAR_10, output_title,
-    # #                    f"{args.output}/{output_title}.png")
-    # (_, axis) = generate_pca_scatter_plot(PCA_df, LABELS_CIFAR_10, output_title)
-
-    points = pick_chosen_label(df_test, 4).head(5)
-    points.to_pickle("./class_4.pickle")  # nie pisać tego do csv i będzie git
-    # mark_chosen_datapoints(axis, pca, points.head(5))
-    # plt.savefig(f"{args.output}/{output_title}_test_pca.png")
+        run(args.train_file, output_title, args.test_file, None,
+            LABELS_CIFAR_10, f"{args.output_path}/marked_{i}")
