@@ -113,11 +113,9 @@ class Setup:
         elif type(options) is MixupAugumentation:
             for index in range(len(dataset)):
                 image, label = images[index], labels[index]
-
                 processed_image = mixup.mixup_criterion(
-                    noise_rate, image, options.chosen_image)
+                    noise_rate, options.chosen_image, image)
                 listing.append(processed_image)
-                labels.append(label)
                 if self.config.save_preprocessing:
                     ids = indexes[index] if indexes is not None else index
                     self._make_image(

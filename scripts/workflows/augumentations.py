@@ -1,6 +1,8 @@
 import numpy as np
 from PIL import Image
 import torchvision.transforms as transforms
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 
 class BaseAugumentation:
@@ -22,9 +24,9 @@ class NoiseAugumentation(BaseAugumentation):
 
 class MixupAugumentation(BaseAugumentation):
     def __init__(self, config: dict) -> None:
-        transform = transforms.Compose([
-            transforms.PILToTensor()
-        ])
+        transform = A.Compose([
+            ToTensorV2()
+         ])
         super().__init__(config)
         img = Image.open(config.get("chosen_image"))
-        self.chosen_image = transform(img)
+        self.chosen_image = transform(image=np.array(img))["image"].float()/255.0
