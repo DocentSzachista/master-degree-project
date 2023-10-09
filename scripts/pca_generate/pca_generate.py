@@ -1,28 +1,41 @@
 import argparse
 import re
 from os import makedirs, path
-
+import json
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sample_picker import pick_chosen_label
 from sklearn.decomposition import PCA
+from utils.constants import LABELS_CIFAR_10
 
-LABELS_CIFAR_10 = {
-    0: "airplane",
-    1: "automobile",
-    2: "bird",
-    3: "cat",
-    4: "deer",
-    5: "dog",
-    6: "frog",
-    7: "horse",
-    8: "ship",
-    9: "truck",
-}
 
-# TODO: Make
+
+class ReadConfig:
+
+    def __init__(self, config_file_path: str) -> None:
+        with open(config_file_path, 'r') as file:
+            content = json.load(file)
+        self.train_file_dir = content["train_file"]
+        self.test_file_dir = content.get("test_file", None)
+        self.output_dir = content.get("output_dir", None)
+        self.picked_datapoints = content.get("picked_datapoints", None)
+        self.model_name = content["model"]
+        self.augumentation = content["augumentation"]
+        self.tag = content["tag"]
+
+
+class Files:
+
+    def __init__(self, config: ReadConfig) -> None:
+        self.train_file = pd.read_pickle(config.train_file_dir)
+        if config.test_file_dir is not None:
+            self.test_file = pd.read_pickle(config.test_file_dir)
+        if config.picked_datapoints is not None:
+            self.picked_datapoints_file = pd.read_pickle(
+                config.picked_datapoints
+            )
 
 
 def prepare_script() -> (argparse.Namespace, str):
@@ -36,7 +49,7 @@ def prepare_script() -> (argparse.Namespace, str):
         "--test_file", required=False, help="location of test pickle dataset."
     )
     parser.add_argument(
-        "-o", "--output", required=True, help="Dir to save generated file"
+        "-o", "--output_path", required=True, help="Dir to save generated file"
     )
     parser.add_argument(
         "-pa", "--picked_datapoints", required=False, help="Location to marked datapoints file"
@@ -196,7 +209,7 @@ if __name__ == "__main__":
     args, output_title = prepare_script()
     if args.picked_datapoints:
         test = pd.read_pickle(args.picked_datapoints)
-        for i in test[["id"]].to_numpy():
+        for i in test["id"].unique():
             run(args.train_file, output_title, args.test_file, test,
                 LABELS_CIFAR_10, f"{args.output_path}/marked_{i}")
     else:
