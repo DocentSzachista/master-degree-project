@@ -51,8 +51,8 @@ class Setup:
         SupportedDatasets.CIFAR: torchvision.datasets.CIFAR10
     }
 
-    def __init__(self) -> None:
-        with open("./config.json", 'r') as file:
+    def __init__(self, config_file="./config.json") -> None:
+        with open(config_file, 'r') as file:
             self.config = Config(json.load(file))
 
         self.mask = noise_creation.generate_mask(
@@ -67,7 +67,7 @@ class Setup:
         self.formatted_time = datetime.strftime(now, "%d-%m-%Y_%H:%M")
         for augumentation in self.config.augumentations:
             path = pathlib.Path(
-                f"{self.config.model.value}-{self.config.tag}/{augumentation.name}/{self.formatted_time}")
+                f"{self.config.model.value}-{self.config.tag}/{augumentation.name}")
             path.mkdir(parents=True, exist_ok=True)
             path.joinpath("dataframes").mkdir(parents=False, exist_ok=True)
             path.joinpath("images").mkdir(parents=False, exist_ok=True)
@@ -108,7 +108,7 @@ class Setup:
                 if self.config.save_preprocessing:
                     ids = indexes[index] if indexes is not None else index
                     self._make_image(
-                        processed_image, f"./{self.config.model.value}-{self.config.tag}/{options.name}/{self.formatted_time}/images/image_{ids}_{label}_noise_{noise_rate}.png")
+                        processed_image, f"./{self.config.model.value}-{self.config.tag}/{options.name}/images/image_{ids}_{label}_noise_{noise_rate}.png")
 
         elif type(options) is MixupAugumentation:
             for index in range(len(dataset)):
@@ -119,7 +119,7 @@ class Setup:
                 if self.config.save_preprocessing:
                     ids = indexes[index] if indexes is not None else index
                     self._make_image(
-                        processed_image, f"./{self.config.model.value}-{self.config.tag}/{options.name}/{self.formatted_time}/images/image_{ids}_{label}_noise_{noise_rate}.png")
+                        processed_image, f"./{self.config.model.value}-{self.config.tag}/{options.name}/images/image_{ids}_{label}_noise_{noise_rate}.png")
 
         else:
             raise TypeError("Provided options are not supported")
@@ -133,7 +133,7 @@ class Setup:
         for key, values in data.items():
             df = pd.DataFrame(values, columns=self.columns)
             df.to_pickle(
-                f"./{self.config.model.value}-{self.config.tag}/{options.name}/{self.formatted_time}/dataframes/id_{key}.pickle")
+                f"./{self.config.model.value}-{self.config.tag}/{options.name}/dataframes/id_{key}.pickle")
 
 
 def converter(tensor): return tensor.detach().cpu().numpy()
