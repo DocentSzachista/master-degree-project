@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.linalg import norm
+import pandas as pd
 
 
 class Distance:
@@ -46,7 +47,24 @@ class CosineDistance(Distance):
                 norm(features_origin)*norm(features_finish)))
 
 
+class MahalanobisDistance:
+    """Class to count mahalanobis distance."""
+
+    name = "Mahalanobis"
+
+    def count_distance(self, whole_dataset: pd.Series, features_i: np.ndarray):
+
+        features = features_i - np.mean(whole_dataset.values)
+        covariance = np.linalg.inv(np.cov(whole_dataset.T))
+        left_part = np.dot(features, covariance)
+        mahalanobis = np.dot(left_part, features.T)
+        print(mahalanobis)
+        return mahalanobis
+        # y_T = (features_i - features_mean ).T
+
+
 DISTANCE_FUNCS = [
+    # MahalanobisDistance(),
     EuclidianDistance(),
     CosineDistance()
 ]
