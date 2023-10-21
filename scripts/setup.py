@@ -60,7 +60,7 @@ class Setup:
         self.shuffled_indexes = noise_creation.create_and_shuffle_indexes(
             (32, 32))
         self.columns = ["id", "original_label", "predicted_label",
-                        "noise_rate", "classifier", "features"]
+                        "noise_rate", "classifier", "features", "noise_percent"]
 
     def create_directories(self):
         now = datetime.now()
@@ -157,5 +157,6 @@ class Worker:
                     predicted.item(),
                     mask_intensity,
                     converter(logits),
-                    converter(features)
+                    converter(features),
+                    round(100*mask_intensity / 1024, 2)
                 ])

@@ -6,10 +6,23 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sample_picker import pick_chosen_label
+from matplotlib.colors import LinearSegmentedColormap
+# from sample_picker import pick_chosen_label
 from sklearn.decomposition import PCA
-from utils.constants import LABELS_CIFAR_10
+# from ..utils.constants import LABELS_CIFAR_10
 
+LABELS_CIFAR_10 = {
+    0: "airplane",
+    1: "automobile",
+    2: "bird",
+    3: "cat",
+    4: "deer",
+    5: "dog",
+    6: "frog",
+    7: "horse",
+    8: "ship",
+    9: "truck",
+}
 
 
 class ReadConfig:
@@ -118,17 +131,26 @@ def mark_chosen_datapoints(
     --------
     Modified Axes object.
     """
+    cmap = LinearSegmentedColormap.from_list("my_cmap", ["blue", "red"])
     values = points_dataframe.noise_rate.values
+    norm = plt.Normalize(vmin=min(values), vmax=max(values))
+    colors = [cmap(norm(val)) for val in values]
+
     predicted_class = points_dataframe.predicted_label.values
     features = np.vstack(points_dataframe.features.values)
     reduced_X = pca.transform(features)
     df = pd.DataFrame(reduced_X, columns=["PC1", "PC2"])
-    axis.scatter(df.loc[:, "PC1"], df.loc[:, "PC2"], s=100, marker="x", c="k")
-    for i, row in df.iterrows():
-        axis.annotate(
-            f"{values[i]}% : {predicted_class[i]}",
-            (row["PC1"], row["PC2"]),
-        )
+    axis.scatter(df.loc[:, "PC1"], df.loc[:, "PC2"], s=100, marker="x", c=colors)
+    # for i, row in df.iterrows():
+
+    #     normalized_value = norm(values[i])
+    #     color = cmap(normalized_value)
+
+    #     axis.annotate(
+    #         f"{values[i]}% : {predicted_class[i]}",
+    #         (row["PC1"], row["PC2"]),
+    #         color=color
+    #     )
     return axis
 
 

@@ -8,6 +8,7 @@ from ..utils import constants, calculations
 from ..setup import Config
 import os
 import re
+import numpy as np
 
 
 def prepare_plotting(figsize: tuple, y_lim: tuple):
@@ -27,83 +28,58 @@ def _save_gif(figure, anim_func, frames, path, filename):
     ani.save(f"{path}/{filename}", writer=writer)
 
 
-def show_logits(df: pd.DataFrame, save_path: str, img_id: str):
-    """ Generates bar plot gif showing changes of logits
+def prepare_distance_data(distance_func: calculations.Distance, dataset: pd.DataFrame, column_name: str):
 
-    """
+    from_origin_dist = []
+    from_fully_augumented_dist = []
 
-    axes, fig = prepare_plotting((8, 7), (-20, 20))
-    logits = df["classifier"]
-    class_name = constants.LABELS_CIFAR_10.get(
-        df["original_label"][0], "ERROR")
-    x_labels = list(constants.LABELS_CIFAR_10.values())
-    bar_plot = axes.bar(
-        x_labels, [0]*len(x_labels), align="center"
-    )
+    values = dataset[column_name].to_numpy()
+    origin = values[0]
+    final_conversion = values[-1]
 
-    def animate(index):
-        value = logits[index][0]
-        if isinstance(df["noise_rate"][index], float):
-            rate = int(100 * df["noise_rate"][index])
-        else:
-            rate = df["noise_rate"][index]
-        axes.set_title(
-            "id: {class_name}_{id} noise_rate: {rate:04d}".format(
-                class_name=class_name, id=img_id, rate=rate))
-
-        for j in range(len(value)):
-            bar_plot[j].set_height(value[j])
-
-    _save_gif(
-        fig, animate, len(logits)-1,
-        f"{save_path}/{class_name}/{img_id}",
-        "logits.gif"
-    )
-    plt.close()
-
-
-def show_distances(distance_func: calculations.Distance, df: pd.DataFrame, img_id: str, save_path: str):
-    """ Shows distance barplot gifs depending on used distance function.
-
-    """
-
-    feature_vecs = df.features.to_numpy()
-    starting_image = feature_vecs[0]
-    finish_image = feature_vecs[-1]
-    axes, fig = prepare_plotting((8, 7), distance_func.y_lim)
-    class_name = constants.LABELS_CIFAR_10.get(
-        df["original_label"][0], "ERROR")
-    x_labels = ["origin", "augumented"]
-    bar_plot = axes.bar(
-        x_labels, [0]*len(x_labels), align="center"
-    )
-    dist_lists = {
-        "origin": [],
-        "augumented": []
-    }
-
-    def animate(index):
-        dist_origin = distance_func.count_distance(
-            starting_image, feature_vecs[index])
-        dist_finish = distance_func.count_distance(
-            finish_image, feature_vecs[index])
-        dist_lists["origin"].append(str(dist_origin))
-        dist_lists["augumented"].append(str(dist_finish))
-        if isinstance(df["noise_rate"][index], float):
-            rate = int(100 * df["noise_rate"][index])
-        else:
-            rate = df["noise_rate"][index]
-        axes.set_title("id: {class_name}_{id} noise_rate: {rate:04d}".format(
-            class_name=class_name, id=img_id, rate=rate)
+    for index in range(len(values)):
+        from_origin_dist.append(
+            distance_func.count_distance(origin, values[index])
         )
-        bar_plot[0].set_height(dist_origin)
-        bar_plot[1].set_height(dist_finish)
+        from_fully_augumented_dist.append(
+            distance_func.count_distance(final_conversion, values[index])
+        )
+        # print(from_origin_dist)
+    return from_origin_dist, from_fully_augumented_dist
 
-    _save_gif(fig, animate, len(feature_vecs) - 1,
+
+def make_bar_plot(
+    df: pd.DataFrame, img_id: str, save_path: str, datas_heights: tuple,
+    x_labels: list, y_lim: tuple, class_name: str, file_name: str
+):
+    axes, fig = prepare_plotting((8, 7), y_lim)
+    bar_plot = axes.bar(
+        x_labels, [0]*len(x_labels), align="center"
+    )
+
+    def animate(index):
+        axes.set_title("id: {class_name}_{id} noise value: {pixels}, noise %: {percentage}".format(
+            class_name=class_name, id=img_id, pixels=df['noise_rate'][index], percentage=df['noise_percent'][index]))
+        # print(datas_heights)
+        for j in range(len(datas_heights)):
+            bar_plot[j].set_height(datas_heights[j][index])
+
+    _save_gif(fig, animate, len(datas_heights[0]) - 1,
               f"{save_path}{class_name}/{img_id}",
-              f"{distance_func.name}.gif")
+              f"{file_name}.gif")
     plt.close()
-    return dist_lists
+
+
+def make_plot(x_points: list, y_points: tuple, y_lim: tuple, title: str, save_path: str, filename: str, legend: list):
+    axes, fig = prepare_plotting((8, 7), y_lim)
+
+    for index in range(len(y_points)):
+        axes.plot(x_points, y_points[index], label=legend[index])
+    axes.set_title(title)
+    axes.set_xlabel('noise rate')
+    axes.set_ylabel('distance')
+    fig.legend()
+    fig.savefig(f"{save_path}/{filename}.png")
 
 
 def run(config_file_path="./config.json"):
@@ -121,18 +97,30 @@ def run(config_file_path="./config.json"):
             for file in files:
                 df = pd.read_pickle(file)
                 img_id = re.findall(r"\_\d+", file)[0]
-                show_logits(
-                    df, f"./out/{path}/", img_id
-                )
-                math_scores = {k.name: [] for k in calculations.DISTANCE_FUNCS}
+                class_name = constants.LABELS_CIFAR_10.get(df['original_label'][0], "Error")
+                logits = df.classifier.to_numpy()
+                logits_tuple = np.array([np.squeeze(row, axis=0) for row in logits]).T
+
+                make_bar_plot(
+                    df, img_id, f"./out/{path}/",
+                    logits_tuple, list(constants.LABELS_CIFAR_10.values()),
+                    (-20, 20), class_name, "logits2")
+
+                # math_scores = {k.name: [] for k in calculations.DISTANCE_FUNCS}
+
                 for func in calculations.DISTANCE_FUNCS:
-                    # if isinstance(func, calculations.MahalanobisDistance):
-                    #     func.count_distance(
-                    #         df["features"], df['features'][0]
-                    #     )
-                    # return
-                    math_scores[func.name].append(
-                        show_distances(func,  df, img_id, f"./out/{path}/")
+
+                    distances = prepare_distance_data(func, df, "features")
+                    make_bar_plot(
+                        df, img_id, f"./out/{path}/", distances,
+                        ["origin", "augumented"], func.y_lim, class_name,
+                        func.name
                     )
-                with open(f"./out/{path}/{img_id}.json", "+w") as file:
-                    json.dump(math_scores, file)
+                    make_plot(y_points=distances, x_points=df.noise_percent.to_numpy(),
+                              y_lim=func.y_lim, title=f"{class_name} {func.name} distance",
+                              save_path=f"./out/{path}/{class_name}/{img_id}", filename=f"{func.name}_line_plot",
+                              legend=["original", "fully transformed"]
+                    )
+
+                # with open(f"./out/{path}/{img_id}.json", "+w") as file:
+                #     json.dump(math_scores, file)
