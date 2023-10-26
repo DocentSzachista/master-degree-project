@@ -1,8 +1,8 @@
-import numpy as np
-from PIL import Image
-import torchvision.transforms as transforms
 import albumentations as A
+import numpy as np
+import torchvision.transforms as transforms
 from albumentations.pytorch import ToTensorV2
+from PIL import Image
 
 
 class BaseAugumentation:

@@ -1,7 +1,8 @@
 import argparse
+import json
 import re
 from os import makedirs, path
-import json
+
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,6 +10,7 @@ import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
 # from sample_picker import pick_chosen_label
 from sklearn.decomposition import PCA
+
 # from ..utils.constants import LABELS_CIFAR_10
 
 LABELS_CIFAR_10 = {

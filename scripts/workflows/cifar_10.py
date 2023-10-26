@@ -2,9 +2,9 @@
 import pandas as pd
 import torch
 import torchvision
-from .utils import set_workstation
 from albumentations.pytorch import ToTensorV2
 
+from .utils import set_workstation
 
 columns = [
     "id",

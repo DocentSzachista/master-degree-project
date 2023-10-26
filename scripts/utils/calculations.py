@@ -1,6 +1,6 @@
 import numpy as np
-from numpy.linalg import norm
 import pandas as pd
+from numpy.linalg import norm
 
 
 class Distance:

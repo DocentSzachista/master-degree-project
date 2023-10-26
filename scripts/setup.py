@@ -1,20 +1,23 @@
 import json
 import pathlib
 from datetime import datetime
+
+import gdown
 import pandas as pd
 import torch
-import gdown
 import torchvision
-from torchvision.datasets import VisionDataset
 from torch import Tensor
-from .augumentations import noise_creation, mixup
-from .models import resnet_cifar_10
+from torchvision.datasets import VisionDataset
 from torchvision.utils import save_image
-from .workflows.cifar_10 import get_features
 
+from .augumentations import mixup, noise_creation
+from .models import resnet_cifar_10
+from .workflows.augumentations import (BaseAugumentation, MixupAugumentation,
+                                       NoiseAugumentation)
+from .workflows.cifar_10 import get_features
+from .workflows.enums import (ColorChannels, SupportedAugumentations,
+                              SupportedDatasets, SupportedModels)
 from .workflows.utils import set_workstation
-from .workflows.enums import SupportedAugumentations, SupportedDatasets, SupportedModels, ColorChannels
-from .workflows.augumentations import MixupAugumentation, NoiseAugumentation, BaseAugumentation
 
 
 class Config:
@@ -28,8 +31,8 @@ class Config:
         self.model = SupportedModels(json_config.get("model"))
         self.tag = json_config.get("tag", "base")
         self.augumentations = [
-            self.supported_augumentations.get(SupportedAugumentations(augumentation["name"]))(augumentation) for augumentation in json_config.get("augumentations")
-        ]
+            self.supported_augumentations.get(SupportedAugumentations(augumentation["name"]))(augumentation)
+            for augumentation in json_config.get("augumentations")]
         self.dataset = SupportedDatasets(json_config.get("dataset"))
         self.model_filename = json_config.get("model_location")
         self.g_drive_hash = json_config.get("model_g_drive")
@@ -40,6 +43,7 @@ class Config:
         self.chosen_images = pd.read_pickle(chosen_images_path)["id"].to_numpy() if (
             chosen_images_path is not None) else None
         self.image_dim = json_config.get("image_dim", [3, 32, 32])
+        self.training_df = pd.read_pickle(json_config.get("train_file"))
 
 
 class Setup:
@@ -108,7 +112,8 @@ class Setup:
                 if self.config.save_preprocessing:
                     ids = indexes[index] if indexes is not None else index
                     self._make_image(
-                        processed_image, f"./{self.config.model.value}-{self.config.tag}/{options.name}/images/image_{ids}_{label}_noise_{noise_rate}.png")
+                        processed_image,
+                        f"./{self.config.model.value}-{self.config.tag}/{options.name}/images/image_{ids}_{label}_noise_{round(noise_rate, 2)}.png")
 
         elif type(options) is MixupAugumentation:
             for index in range(len(dataset)):
@@ -119,7 +124,8 @@ class Setup:
                 if self.config.save_preprocessing:
                     ids = indexes[index] if indexes is not None else index
                     self._make_image(
-                        processed_image, f"./{self.config.model.value}-{self.config.tag}/{options.name}/images/image_{ids}_{label}_noise_{noise_rate}.png")
+                        processed_image,
+                        f"./{self.config.model.value}-{self.config.tag}/{options.name}/images/image_{ids}_{label}_noise_{noise_rate}.png")
 
         else:
             raise TypeError("Provided options are not supported")
@@ -132,6 +138,11 @@ class Setup:
     def save_results(self, data: dict, options: BaseAugumentation):
         for key, values in data.items():
             df = pd.DataFrame(values, columns=self.columns)
+            if isinstance(options, NoiseAugumentation):
+                df["noise_percent"] = df["noise_percent"].apply(lambda numb: round(numb / 1024, 2))
+            elif isinstance(options, NoiseAugumentation):
+                df["noise_percent"] = df["noise_percent"].apply(lambda numb: round(numb / 100, 2))
+
             df.to_pickle(
                 f"./{self.config.model.value}-{self.config.tag}/{options.name}/dataframes/id_{key}.pickle")
 
@@ -158,5 +169,5 @@ class Worker:
                     mask_intensity,
                     converter(logits),
                     converter(features),
-                    round(100*mask_intensity / 1024, 2)
+                    100*mask_intensity
                 ])
