@@ -9,6 +9,7 @@ import torchvision
 from torch import Tensor
 from torchvision.datasets import VisionDataset
 from torchvision.utils import save_image
+from torch.utils.data import DataLoader
 
 from .augumentations import mixup, noise_creation
 from .models import resnet_cifar_10
@@ -155,7 +156,6 @@ class Worker:
     @staticmethod
     def test_model_data_loader(model, images: list, labels: list, mask_intensity: int, storage: dict, indexes: list):
         set_workstation("cuda:0")
-        indexes
         with torch.no_grad():
             for image, label, id in zip(images, labels, indexes):
                 image = image.cuda().unsqueeze(0)
@@ -165,6 +165,25 @@ class Worker:
 
                 storage[id].append([
                     id,  label,
+                    predicted.item(),
+                    mask_intensity,
+                    converter(logits),
+                    converter(features),
+                    100*mask_intensity
+                ])
+
+    @staticmethod
+    def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: int, storage: dict):
+        set_workstation("cuda:0")
+        model.eval()
+        model.to("cuda:0")
+        for idx, (inputs, targets) in enumerate(data_loader):
+                inputs, targets = inputs.to("cuda:0"), targets.to("cuda:0")
+                logits = model(inputs)
+                features = get_features(model._modules['1'], inputs)
+                _, predicted = torch.max(logits, 1)
+                storage[idx].append([
+                    f"{idx}_{round(mask_intensity, 2)}", targets,
                     predicted.item(),
                     mask_intensity,
                     converter(logits),

@@ -3,6 +3,9 @@ from albumentations.pytorch import ToTensorV2
 import albumentations as A
 import numpy as np
 from scripts.plots.barplot import run
+import copy
+from torch.utils.data import DataLoader
+
 
 if __name__ == '__main__':
 
@@ -12,7 +15,7 @@ if __name__ == '__main__':
     transforms = A.Compose([
         ToTensorV2()
     ])
-    preprocess = lambda x: transforms(image=np.array(x))["image"].float()/255.0
+    def preprocess(x): return transforms(image=np.array(x))["image"].float()/255.0
     cifar = setup.download_test_data(preprocess)
     # part where chosen images are picked.
     if setup.config.chosen_images is not None:
@@ -26,12 +29,22 @@ if __name__ == '__main__':
         indexes = list(range(len(cifar)))
         storage = {k: [] for k in indexes}
         images = [cifar[i][0] for i in range(len(cifar))]
-        cifar.data = images # Done to make sure that images are as tensors, not numpy arrays
+        cifar.data = images  # Done to make sure that images are as tensors, not numpy arrays
+        copy_cifar = copy.deepcopy(cifar)
     for augumentation in setup.config.augumentations:
         for rate in augumentation.make_iterator():
             images, labels = setup.modify_dataset(augumentation, cifar, rate, indexes=setup.config.chosen_images)
-            Worker.test_model_data_loader(model, images, labels, rate, storage, indexes=indexes)
+            copy_cifar.data = images
+            copy_cifar.targets = labels
+            data_loader = DataLoader(
+                copy_cifar, batch_size=64, shuffle=False
+            )
+            # Worker.test_model_data_loader(model, images, labels, rate, storage, indexes=indexes)
+            Worker.test_model_with_data_loader(
+                model=model, data_loader=data_loader,
+                mask_intensity=rate, storage=storage
+            )
         setup.save_results(storage, augumentation)
         storage = {k: [] for k in storage.keys()}
 
-    run()
+    # run()
