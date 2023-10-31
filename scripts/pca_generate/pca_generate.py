@@ -1,12 +1,17 @@
 import argparse
+import json
+import re
 from os import makedirs, path
+
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.colors import LinearSegmentedColormap
+# from sample_picker import pick_chosen_label
 from sklearn.decomposition import PCA
-import re
-from sample_picker import pick_chosen_label
-import matplotlib.colors as mcolors
+
+# from ..utils.constants import LABELS_CIFAR_10
 
 LABELS_CIFAR_10 = {
     0: "airplane",
@@ -22,6 +27,32 @@ LABELS_CIFAR_10 = {
 }
 
 
+class ReadConfig:
+
+    def __init__(self, config_file_path: str) -> None:
+        with open(config_file_path, 'r') as file:
+            content = json.load(file)
+        self.train_file_dir = content["train_file"]
+        self.test_file_dir = content.get("test_file", None)
+        self.output_dir = content.get("output_dir", None)
+        self.picked_datapoints = content.get("picked_datapoints", None)
+        self.model_name = content["model"]
+        self.augumentation = content["augumentation"]
+        self.tag = content["tag"]
+
+
+class Files:
+
+    def __init__(self, config: ReadConfig) -> None:
+        self.train_file = pd.read_pickle(config.train_file_dir)
+        if config.test_file_dir is not None:
+            self.test_file = pd.read_pickle(config.test_file_dir)
+        if config.picked_datapoints is not None:
+            self.picked_datapoints_file = pd.read_pickle(
+                config.picked_datapoints
+            )
+
+
 def prepare_script() -> (argparse.Namespace, str):
     parser = argparse.ArgumentParser(
         description="Script to visualize distribution of classifiers."
@@ -33,7 +64,10 @@ def prepare_script() -> (argparse.Namespace, str):
         "--test_file", required=False, help="location of test pickle dataset."
     )
     parser.add_argument(
-        "-o", "--output", required=True, help="Dir to save generated file"
+        "-o", "--output_path", required=True, help="Dir to save generated file"
+    )
+    parser.add_argument(
+        "-pa", "--picked_datapoints", required=False, help="Location to marked datapoints file"
     )
     args = parser.parse_args()
     output_title = re.findall(r"\w+\.", args.train_file)
@@ -99,17 +133,26 @@ def mark_chosen_datapoints(
     --------
     Modified Axes object.
     """
+    cmap = LinearSegmentedColormap.from_list("my_cmap", ["blue", "red"])
     values = points_dataframe.noise_rate.values
+    norm = plt.Normalize(vmin=min(values), vmax=max(values))
+    colors = [cmap(norm(val)) for val in values]
+
     predicted_class = points_dataframe.predicted_label.values
     features = np.vstack(points_dataframe.features.values)
     reduced_X = pca.transform(features)
     df = pd.DataFrame(reduced_X, columns=["PC1", "PC2"])
-    axis.scatter(df.loc[:, "PC1"], df.loc[:, "PC2"], s=100, marker="x", c="k")
-    for i, row in df.iterrows():
-        axis.annotate(
-            f"{values[i]}% : {predicted_class[i]}",
-            (row["PC1"], row["PC2"]),
-        )
+    axis.scatter(df.loc[:, "PC1"], df.loc[:, "PC2"], s=100, marker="x", c=colors)
+    # for i, row in df.iterrows():
+
+    #     normalized_value = norm(values[i])
+    #     color = cmap(normalized_value)
+
+    #     axis.annotate(
+    #         f"{values[i]}% : {predicted_class[i]}",
+    #         (row["PC1"], row["PC2"]),
+    #         color=color
+    #     )
     return axis
 
 
@@ -188,18 +231,11 @@ def run(
 
 if __name__ == "__main__":
     args, output_title = prepare_script()
-    df_train = pd.read_pickle(args.train_file)
-    if args.test_file is not None:
-        df_test = pd.read_pickle(args.test_file)
+    if args.picked_datapoints:
+        test = pd.read_pickle(args.picked_datapoints)
+        for i in test["id"].unique():
+            run(args.train_file, output_title, args.test_file, test,
+                LABELS_CIFAR_10, f"{args.output_path}/marked_{i}")
     else:
-        df_test = df_train
-
-    # PCA_df, pca = prepare_pca(df_train, df_test)
-    # # make_visualization(PCA_df, LABELS_CIFAR_10, output_title,
-    # #                    f"{args.output}/{output_title}.png")
-    # (_, axis) = generate_pca_scatter_plot(PCA_df, LABELS_CIFAR_10, output_title)
-
-    points = pick_chosen_label(df_test, 4).head(5)
-    points.to_pickle("./class_4.pickle")  # nie pisać tego do csv i będzie git
-    # mark_chosen_datapoints(axis, pca, points.head(5))
-    # plt.savefig(f"{args.output}/{output_title}_test_pca.png")
+        run(args.train_file, output_title, args.test_file, None,
+            LABELS_CIFAR_10, f"{args.output_path}/marked_{i}")

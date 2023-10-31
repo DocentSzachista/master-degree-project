@@ -1,4 +1,4 @@
-# ignore files downloaded / generated 
+# ignore files downloaded / generated
 out/
 dataframes/
 # Byte-compiled / optimized / DLL files
@@ -6,9 +6,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# ignore model files
+*.ckpt
+# ignore pandas pickle files
+*.pickle
 # C extensions
 *.so
-
+*.png
 # Distribution / packaging
 .Python
 build/

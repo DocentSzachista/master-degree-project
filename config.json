@@ -1,0 +1,26 @@
+{
+    "tag": "red",
+    "model": "resnet",
+    "model_g_drive": "1YSs2XjzvAM_0ZbttiznTDo7GUdCX1erK",
+    "chosen_images": "./class_4.pickle",
+    "augumentations": [
+        {
+            "name": "noise",
+            "start_point": 0,
+            "finish_point": 1024,
+            "step": 5,
+            "apply_random_on_each_image": false
+        },
+        {
+            "name": "mixup",
+            "start_point": 0,
+            "finish_point": 1,
+            "step": 0.05,
+            "chosen_image": "./airplane1.png"
+        }
+    ],
+    "dataset": "cifar_10",
+    "image_dim": [3, 32, 32],
+    "chosen_color_chanels": "RGB",
+    "save_preprocessing": true
+}
