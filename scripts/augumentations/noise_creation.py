@@ -2,6 +2,7 @@ import copy
 import random
 
 import torch
+import numpy as np
 
 
 def create_and_shuffle_indexes(matrix_shape: tuple):
@@ -21,7 +22,9 @@ def apply_noise_to_image(
     for index in range(rate):
         i = shuffled_indexes[index] // image_length
         j = shuffled_indexes[index] % image_length
-        image_copy[:, i, j] += mask[:, i, j]
+        # image_copy[j, i, :] += mask[:, i, j]
+        np.add(image_copy[j, i, :], mask[:, i, j], out=image_copy[j, i, :],  casting="unsafe")
+        # image_copy[:, i, j] += mask[:, i, j]
     return image_copy
 
 

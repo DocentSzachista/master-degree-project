@@ -7,7 +7,7 @@ import pandas as pd
 import torch
 import torchvision
 from torch import Tensor
-from torchvision.datasets import VisionDataset
+from torchvision.datasets import VisionDataset, CIFAR10
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
 
@@ -94,18 +94,20 @@ class Setup:
         return data_function("./datasets", train=False, download=True, transform=preprocess)
 
     def modify_dataset(self, options: BaseAugumentation,
-                       dataset: VisionDataset, noise_rate: float, indexes: list
+                       dataset: CIFAR10, noise_rate: float, indexes: list
                        ):
         """Transforms images according to passed options, yields dataset with """
 
         listing = []
+        print(dataset.data.shape)
         images = dataset.data
+        print("W funkcji")
         labels = dataset.targets
         if type(options) is NoiseAugumentation:
             for index in range(len(dataset)):
                 image, label = images[index], labels[index]
                 processed_image = noise_creation.apply_noise_to_image(
-                    self.shuffled_indexes, image, self.mask, rate=int(
+                    self.shuffled_indexes, image, self.mask.numpy(), rate=int(
                         noise_rate)
                 )
                 listing.append(processed_image)
@@ -147,6 +149,17 @@ class Setup:
             df.to_pickle(
                 f"./{self.config.model.value}-{self.config.tag}/{options.name}/dataframes/id_{key}.pickle")
 
+    def save_results_gpu(self, data: list, options: BaseAugumentation, index: int):
+
+        df = pd.DataFrame(data, columns=self.columns)
+        if isinstance(options, NoiseAugumentation):
+            df["noise_percent"] = df["noise_percent"].apply(lambda numb: round(numb / 1024, 2))
+        elif isinstance(options, NoiseAugumentation):
+            df["noise_percent"] = df["noise_percent"].apply(lambda numb: round(numb / 100, 2))
+
+        df.to_pickle(
+            f"./{self.config.model.value}-{self.config.tag}/{options.name}/dataframes/id_{index}.pickle")
+
 
 def converter(tensor): return tensor.detach().cpu().numpy()
 
@@ -173,20 +186,25 @@ class Worker:
                 ])
 
     @staticmethod
-    def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: int, storage: dict):
+    def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: int, image_id: int):
         set_workstation("cuda:0")
+        storage = []
         model.eval()
         model.to("cuda:0")
-        for idx, (inputs, targets) in enumerate(data_loader):
-                inputs, targets = inputs.to("cuda:0"), targets.to("cuda:0")
-                logits = model(inputs)
-                features = get_features(model._modules['1'], inputs)
-                _, predicted = torch.max(logits, 1)
-                storage[idx].append([
-                    f"{idx}_{round(mask_intensity, 2)}", targets,
-                    predicted.item(),
+        for _, (inputs, targets) in enumerate(data_loader):
+            inputs, targets = inputs.to("cuda:0"), targets.to("cuda:0")
+            logits = model(inputs)
+            _, predicted = torch.max(logits, dim=1)
+            predicted = converter(predicted)
+            logits = converter(logits)
+            features = get_features(model._modules['1'], inputs)
+            for index in logits.shape[0]:
+                storage.append([
+                    f"{image_id}_{round(mask_intensity, 2)}", targets[index],
+                    predicted[index],
                     mask_intensity,
-                    converter(logits),
-                    converter(features),
+                    logits[index],
+                    converter(features[index]),
                     100*mask_intensity
                 ])
+        return storage
