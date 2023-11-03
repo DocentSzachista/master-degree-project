@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
 from numpy.linalg import norm
-from scipy.spatial import distance
+from sklearn.covariance import EmpiricalCovariance
+
 
 class Distance:
     """Abstract class that for measuring distance"""
     name = "abstract"
     y_lim = (0, 10)
+
     def count_distance(self, features_origin: np.ndarray, features_finish: np.ndarray):
         raise NotImplementedError("This is abstract method, its not gonna be implemented")
 
@@ -42,9 +44,9 @@ class CosineDistance(Distance):
             Ending point   (point in the space between origin and final version)
         """
         return float(np.dot(
-                features_origin, features_finish.T
-                        )/(
-                norm(features_origin)*norm(features_finish)))
+            features_origin, features_finish.T
+        )/(
+            norm(features_origin)*norm(features_finish)))
 
 
 class MahalanobisDistance:
@@ -52,48 +54,36 @@ class MahalanobisDistance:
 
     name = "Mahalanobis"
 
-    def count_distance(self, whole_dataset: np.ndarray, features_i: np.ndarray):
+    def __init__(self) -> None:
+        self.dist = {}
+        self.classes = {}
 
-        mean = np.mean(whole_dataset, axis=0)
-        cov_matrix = np.cov(whole_dataset.T, rowvar=False)
+    def fit(self, df: pd.DataFrame):
+        self.classes = df.original_label.unique()
 
-        cos = distance.mahalanobis(
-            features_i, mean, cov_matrix
-        )
-        print(cos)
+        for index in self.classes:
+            x = df[df['original_label'] == index]['features'].tolist()
+            self.dist[index] = EmpiricalCovariance().fit(x)
 
-        # features = features_i - np.mean(whole_dataset.values)
-        # covariance = np.linalg.inv(np.cov(whole_dataset.T))
-        # left_part = np.dot(features, covariance)
-        # mahalanobis = np.dot(left_part, features.T)
-        # print(mahalanobis)
-        # return mahalanobis
-        # y_T = (features_i - features_mean ).T
+    def count_distance(self, df: pd.DataFrame):
+        x = df['features'].to_numpy()
 
-# mal = MahalanobisDistance()
-# df = pd.read_pickle("./dataframes/cifar_10.pickle")
-# vectors = df["features"].apply(lambda vec: vec.tolist())
-# vectors = vectors.to_list()
+        x = np.stack(x).squeeze().tolist()
+        res = np.stack([np.sqrt(self.dist[index].mahalanobis(x)) for index in self.classes], axis=0)
+        res = res.min(axis=0)
+        return -res
 
 
-# # mu = np.mean(vectors, axis=0)
-# # sigma = np.cov(cectors.T)
+df = pd.read_pickle("../../dataframes/cifar_10.pickle")
+df_2 = pd.read_pickle("../../dataframes/id_2353.pickle")
+dist = MahalanobisDistance()
 
+dist.fit(df)
+print(len(dist.count_distance(df_2)))
 
-# cokolwiek = pd.DataFrame(vectors, columns=list(range(1, 2049)))
-# # print(len(vectors[0]))
-# print(cokolwiek.head())
-
-# # # for vector in vectors:
-# # #     print(len(vector))
-# df_2 = pd.read_pickle("./dataframes/id_2353.pickle")
-# point = df_2.features.to_list()[0].tolist()
-# mal.count_distance(
-#     df, point
-# )
 
 DISTANCE_FUNCS = [
-    # MahalanobisDistance(),
+    MahalanobisDistance(),
     EuclidianDistance(),
     CosineDistance()
 ]

@@ -138,9 +138,21 @@ def run(config_file_path="./config.json"):
     """Runs gifs generation basing on a config
        file used to test neural network.
     """
+    dist_funcs = [
+        calculations.CosineDistance(),
+        calculations.EuclidianDistance()
+    ]
+
     with open(config_file_path, "r") as file:
         config = json.load(file)
         conf = Config(config)
+
+        malanobis = calculations.MahalanobisDistance()
+        malanobis.fit(conf.training_df)
+        dist_funcs.append(malanobis)
+
+
+
         for augumentation in conf.augumentations:
             path = f"./{conf.model.name.lower()}-{conf.tag}/{augumentation.name}"
             files = [os.path.join(f"{path}/dataframes", file)
@@ -160,7 +172,7 @@ def run(config_file_path="./config.json"):
 
                 # math_scores = {k.name: [] for k in calculations.DISTANCE_FUNCS}
 
-                for func in calculations.DISTANCE_FUNCS:
+                for func in dist_funcs:
 
                     distances = prepare_distance_data(func, df, "features")
                     make_bar_plot(
@@ -173,12 +185,13 @@ def run(config_file_path="./config.json"):
                               save_path=f"./out/{path}/{class_name}/{img_id}", filename=f"{func.name}_line_plot",
                               legend=["original", "fully transformed"]
                               )
-                    # if isinstance(func, calculations.EuclidianDistance):
-                    mean_distances = prepare_distance_data_mean(func, conf.training_df, df, "features")
-                    make_bar_plot(df, img_id, f"./out/{path}/", mean_distances,
-                                  list(constants.LABELS_CIFAR_10.values()),
-                                  func.y_lim, class_name, f"{func.name}_mean")
-                    make_plot(y_points=mean_distances, x_points=df.noise_percent.to_numpy(),
-                              y_lim=func.y_lim, title=f"{class_name} {func.name} mean distance",
-                              save_path=f"./out/{path}/{class_name}/{img_id}", filename=f"{func.name}_mean_line_plot",
-                              legend=list(constants.LABELS_CIFAR_10.values()))
+
+                    if not isinstance(func, calculations.MahalanobisDistance):
+                        mean_distances = prepare_distance_data_mean(func, conf.training_df, df, "features")
+                        make_bar_plot(df, img_id, f"./out/{path}/", mean_distances,
+                                    list(constants.LABELS_CIFAR_10.values()),
+                                    func.y_lim, class_name, f"{func.name}_mean")
+                        make_plot(y_points=mean_distances, x_points=df.noise_percent.to_numpy(),
+                                y_lim=func.y_lim, title=f"{class_name} {func.name} mean distance",
+                                save_path=f"./out/{path}/{class_name}/{img_id}", filename=f"{func.name}_mean_line_plot",
+                                legend=list(constants.LABELS_CIFAR_10.values()))
