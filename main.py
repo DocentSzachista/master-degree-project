@@ -35,6 +35,7 @@ if __name__ == '__main__':
         # cifar.data = images  # Done to make sure that images are as tensors, not numpy arrays
         copy_cifar = copy.deepcopy(cifar)
     for augumentation in setup.config.augumentations:
+
         for data_loader, augumentation_rate, image_id in setup.modify_dataset_gpu(
             cifar, copy_cifar, indexes
         ):
@@ -65,7 +66,7 @@ if __name__ == '__main__':
                 mask_intensity=augumentation_rate, image_id=image_id
             )
 
-            setup.save_results_gpu(to_save, augumentation, image_id)
+
 
 
         # setup.save_results(storage, augumentation)

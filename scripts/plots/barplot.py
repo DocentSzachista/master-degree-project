@@ -138,6 +138,7 @@ def run(config_file_path="./config.json"):
     """Runs gifs generation basing on a config
        file used to test neural network.
     """
+
     dist_funcs = [
         calculations.CosineDistance(),
         calculations.EuclidianDistance()
@@ -150,6 +151,7 @@ def run(config_file_path="./config.json"):
         malanobis = calculations.MahalanobisDistance()
         malanobis.fit(conf.training_df)
         dist_funcs.append(malanobis)
+
 
 
 
@@ -174,6 +176,7 @@ def run(config_file_path="./config.json"):
 
                 for func in dist_funcs:
 
+
                     distances = prepare_distance_data(func, df, "features")
                     make_bar_plot(
                         df, img_id, f"./out/{path}/", distances,
@@ -186,6 +189,7 @@ def run(config_file_path="./config.json"):
                               legend=["original", "fully transformed"]
                               )
 
+
                     if not isinstance(func, calculations.MahalanobisDistance):
                         mean_distances = prepare_distance_data_mean(func, conf.training_df, df, "features")
                         make_bar_plot(df, img_id, f"./out/{path}/", mean_distances,
@@ -195,3 +199,4 @@ def run(config_file_path="./config.json"):
                                 y_lim=func.y_lim, title=f"{class_name} {func.name} mean distance",
                                 save_path=f"./out/{path}/{class_name}/{img_id}", filename=f"{func.name}_mean_line_plot",
                                 legend=list(constants.LABELS_CIFAR_10.values()))
+

@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 from numpy.linalg import norm
-from sklearn.covariance import EmpiricalCovariance
 
+from sklearn.covariance import EmpiricalCovariance
 
 class Distance:
     """Abstract class that for measuring distance"""
@@ -49,6 +49,7 @@ class CosineDistance(Distance):
             norm(features_origin)*norm(features_finish)))
 
 
+
 class MahalanobisDistance:
     """Class to count mahalanobis distance."""
 
@@ -72,18 +73,3 @@ class MahalanobisDistance:
         res = np.stack([np.sqrt(self.dist[index].mahalanobis(x)) for index in self.classes], axis=0)
         res = res.min(axis=0)
         return -res
-
-
-df = pd.read_pickle("../../dataframes/cifar_10.pickle")
-df_2 = pd.read_pickle("../../dataframes/id_2353.pickle")
-dist = MahalanobisDistance()
-
-dist.fit(df)
-print(len(dist.count_distance(df_2)))
-
-
-DISTANCE_FUNCS = [
-    MahalanobisDistance(),
-    EuclidianDistance(),
-    CosineDistance()
-]

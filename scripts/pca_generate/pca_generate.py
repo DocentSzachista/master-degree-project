@@ -182,8 +182,9 @@ def prepare_pca(
     else:
         test_features = train_features
         labels = dataframe_train.original_label
-    dupa = pca.fit_transform(train_features)
-    print(dupa.shape)
+
+    pca.fit(train_features)
+
     X_reduced = pca.transform(test_features)
     df = pd.DataFrame(X_reduced, columns=["PC1", "PC2"])
     final_df = pd.concat([df, labels], axis=1)

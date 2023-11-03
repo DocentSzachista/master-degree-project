@@ -1,13 +1,17 @@
 import json
 import pathlib
 from datetime import datetime
+
 import os
+
 import gdown
 import pandas as pd
 import torch
 import torchvision
 from torch import Tensor
+
 import numpy as np
+
 from torchvision.datasets import VisionDataset, CIFAR10
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
@@ -57,11 +61,9 @@ class Setup:
         SupportedDatasets.CIFAR: torchvision.datasets.CIFAR10
     }
 
-
     def __init__(self, config_file="./config.json") -> None:
         with open(config_file, 'r') as file:
             self.config = Config(json.load(file))
-
 
         self.mask = noise_creation.generate_mask(
             self.config.image_dim, self.config.color_channels)
@@ -85,6 +87,7 @@ class Setup:
         if model_function is None:
             raise KeyError("Provided model is not supported")
         if self.config.g_drive_hash is not None and not os.path.isfile("./ResNet152_CIFAR10.ckpt") :
+
             filename = gdown.download(id=self.config.g_drive_hash)
             return model_function(f"./{filename}")
         else:
@@ -221,7 +224,9 @@ class Worker:
                 ])
 
     @staticmethod
+
     def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: list, image_id: int):
+
         set_workstation("cuda:0")
         storage = []
         model.eval()
