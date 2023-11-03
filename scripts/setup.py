@@ -2,11 +2,16 @@ import json
 import pathlib
 from datetime import datetime
 
+import os
+
 import gdown
 import pandas as pd
 import torch
 import torchvision
 from torch import Tensor
+
+import numpy as np
+
 from torchvision.datasets import VisionDataset, CIFAR10
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
@@ -80,8 +85,9 @@ class Setup:
     def download_model(self):
         model_function = self.supported_models.get(self.config.model)
         if model_function is None:
-            raise KeyError("Provided dataset is not supported")
-        if self.config.g_drive_hash is not None:
+            raise KeyError("Provided model is not supported")
+        if self.config.g_drive_hash is not None and not os.path.isfile("./ResNet152_CIFAR10.ckpt") :
+
             filename = gdown.download(id=self.config.g_drive_hash)
             return model_function(f"./{filename}")
         else:
@@ -92,6 +98,38 @@ class Setup:
         if data_function is None:
             raise KeyError("Provided dataset is not supported")
         return data_function("./datasets", train=False, download=True, transform=preprocess)
+
+    def modify_dataset_gpu(self, cifar: CIFAR10, copy_cifar :CIFAR10, indexes: list):
+        for augumentation in self.config.augumentations:
+            iterator = augumentation.make_iterator()
+            for image_id in indexes:
+                starting_image = cifar.data[image_id]
+                augumented_class = []
+                for rate in iterator:
+                    if isinstance(augumentation, NoiseAugumentation):
+                        processed_image = noise_creation.apply_noise_to_image(
+                            self.shuffled_indexes, starting_image, self.mask.numpy(), rate)
+                        augumented_class.append(processed_image)
+                    elif isinstance(augumentation, MixupAugumentation):
+                        processed_image = mixup.mixup_criterion( rate, augumentation.chosen_image.T, starting_image,)
+                        augumented_class.append(processed_image)
+                    if self.config.save_preprocessing:
+                        self._make_image(
+                            processed_image,
+                        f"./{self.config.model.value}-{self.config.tag}/{augumentation.name}/images/image_{image_id}_{cifar.targets[image_id]}_noise_{rate}.png")
+
+                labels = [cifar.targets[image_id] for i in range(0, len(iterator))]
+                stack = np.array(augumented_class)
+
+                # images, labels = setup.modify_dataset(augumentation, cifar, rate, indexes=setup.config.chosen_images)
+                # stack = np.vstack(images)
+                copy_cifar.data = stack
+                copy_cifar.targets = labels
+                yield  DataLoader(
+                    copy_cifar, batch_size=32, shuffle=False, drop_last=True
+                ), iterator, image_id
+
+
 
     def modify_dataset(self, options: BaseAugumentation,
                        dataset: CIFAR10, noise_rate: float, indexes: list
@@ -186,7 +224,9 @@ class Worker:
                 ])
 
     @staticmethod
-    def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: int, image_id: int):
+
+    def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: list, image_id: int):
+
         set_workstation("cuda:0")
         storage = []
         model.eval()
@@ -202,7 +242,7 @@ class Worker:
                 storage.append([
                     f"{image_id}_{round(mask_intensity, 2)}", targets[index],
                     predicted[index],
-                    mask_intensity,
+                    mask_intensity[index],
                     logits[index],
                     converter(features[index]),
                     100*mask_intensity
