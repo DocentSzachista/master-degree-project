@@ -60,15 +60,15 @@ if __name__ == '__main__':
 
     #         # images, labels = setup.modify_dataset(augumentation, cifar, rate, indexes=setup.config.chosen_images)
     #         # stack = np.vstack(images)
-    #         copy_cifar.data = stack
-    #         copy_cifar.targets = labels
-    #         data_loader = DataLoader(
-    #             copy_cifar, batch_size=32, shuffle=False, drop_last=True
-    #         )
+            copy_cifar.data = stack
+            copy_cifar.targets = labels
+            data_loader = DataLoader(
+                copy_cifar, batch_size=32, shuffle=False, drop_last=True
+            )
     #         # Worker.test_model_data_loader(model, images, labels, rate, storage, indexes=indexes)
             to_save = Worker.test_model_with_data_loader(
                 model=model, data_loader=data_loader, 
-                mask_intensity=iterator, converted_ids=converted_ids
+                mask_intensity=rate, converted_ids=converted_ids
             )
             setup.save_results_gpu(to_save, augumentation,  rate)
 

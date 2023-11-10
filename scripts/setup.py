@@ -230,7 +230,7 @@ class Worker:
                 ])
 
     @staticmethod
-    def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: list, converted_ids: list):
+    def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: int, converted_ids: list):
         set_workstation("cuda:0")
         storage = []
         model.eval()
@@ -247,7 +247,7 @@ class Worker:
                 storage.append([
                     converted_ids[ind], converter(targets[index]).item(),
                     predicted[index],
-                    mask_intensity[ind],
+                    mask_intensity,
                     logits[index],
                     converter(features[index]),
                     100*mask_intensity[ind]
