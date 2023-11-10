@@ -7,6 +7,9 @@ import pandas as pd
 import torch
 import torchvision
 from torch import Tensor
+
+import numpy as np
+
 from torchvision.datasets import VisionDataset, CIFAR10
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
@@ -98,6 +101,38 @@ class Setup:
         if data_function is None:
             raise KeyError("Provided dataset is not supported")
         return data_function("./datasets", train=False, download=True, transform=preprocess)
+
+    def modify_dataset_gpu(self, cifar: CIFAR10, copy_cifar :CIFAR10, indexes: list):
+        for augumentation in self.config.augumentations:
+            iterator = augumentation.make_iterator()
+            for image_id in indexes:
+                starting_image = cifar.data[image_id]
+                augumented_class = []
+                for rate in iterator:
+                    if isinstance(augumentation, NoiseAugumentation):
+                        processed_image = noise_creation.apply_noise_to_image(
+                            self.shuffled_indexes, starting_image, self.mask.numpy(), rate)
+                        augumented_class.append(processed_image)
+                    elif isinstance(augumentation, MixupAugumentation):
+                        processed_image = mixup.mixup_criterion( rate, augumentation.chosen_image.T, starting_image,)
+                        augumented_class.append(processed_image)
+                    if self.config.save_preprocessing:
+                        self._make_image(
+                            processed_image,
+                        f"./{self.config.model.value}-{self.config.tag}/{augumentation.name}/images/image_{image_id}_{cifar.targets[image_id]}_noise_{rate}.png")
+
+                labels = [cifar.targets[image_id] for i in range(0, len(iterator))]
+                stack = np.array(augumented_class)
+
+                # images, labels = setup.modify_dataset(augumentation, cifar, rate, indexes=setup.config.chosen_images)
+                # stack = np.vstack(images)
+                copy_cifar.data = stack
+                copy_cifar.targets = labels
+                yield  DataLoader(
+                    copy_cifar, batch_size=32, shuffle=False, drop_last=True
+                ), iterator, image_id
+
+
 
     def modify_dataset(self, options: BaseAugumentation,
                        dataset: CIFAR10, noise_rate: float, indexes: list

@@ -58,14 +58,14 @@ if __name__ == '__main__':
             labels = cifar.targets #[cifar.targets[image_id] for i in range(0, len(iterator))]
             stack = np.array(augumented_class)
 
-            # images, labels = setup.modify_dataset(augumentation, cifar, rate, indexes=setup.config.chosen_images)
-            # stack = np.vstack(images)
-            copy_cifar.data = stack
-            copy_cifar.targets = labels
-            data_loader = DataLoader(
-                copy_cifar, batch_size=32, shuffle=False, drop_last=True
-            )
-            # Worker.test_model_data_loader(model, images, labels, rate, storage, indexes=indexes)
+    #         # images, labels = setup.modify_dataset(augumentation, cifar, rate, indexes=setup.config.chosen_images)
+    #         # stack = np.vstack(images)
+    #         copy_cifar.data = stack
+    #         copy_cifar.targets = labels
+    #         data_loader = DataLoader(
+    #             copy_cifar, batch_size=32, shuffle=False, drop_last=True
+    #         )
+    #         # Worker.test_model_data_loader(model, images, labels, rate, storage, indexes=indexes)
             to_save = Worker.test_model_with_data_loader(
                 model=model, data_loader=data_loader, 
                 mask_intensity=iterator, converted_ids=converted_ids
