@@ -1,7 +1,7 @@
 import json
 import pathlib
 from datetime import datetime
-
+import os 
 import gdown
 import pandas as pd
 import torch
@@ -10,6 +10,7 @@ from torch import Tensor
 from torchvision.datasets import VisionDataset, CIFAR10
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
+from PIL import Image
 
 from .augumentations import mixup, noise_creation
 from .models import resnet_cifar_10
@@ -44,7 +45,7 @@ class Config:
         self.chosen_images = pd.read_pickle(chosen_images_path)["id"].to_numpy() if (
             chosen_images_path is not None) else None
         self.image_dim = json_config.get("image_dim", [3, 32, 32])
-        self.training_df = pd.read_pickle(json_config.get("train_file"))
+        # self.training_df = pd.read_pickle(json_config.get("train_file"))
 
 
 class Setup:
@@ -82,8 +83,13 @@ class Setup:
         if model_function is None:
             raise KeyError("Provided dataset is not supported")
         if self.config.g_drive_hash is not None:
-            filename = gdown.download(id=self.config.g_drive_hash)
-            return model_function(f"./{filename}")
+            if not os.path.isfile("./ResNet152_CIFAR10.ckpt"):
+                filename =f"./{gdown.download(id=self.config.g_drive_hash)}"
+                # return model_function(f"./{filename}")
+            else: 
+                filename = "./ResNet152_CIFAR10.ckpt"
+            
+            return model_function(filename)
         else:
             return model_function(self.config.model_filename)
 
@@ -136,7 +142,9 @@ class Setup:
         return listing, labels
 
     def _make_image(self, image: Tensor, image_name: str) -> None:
-        save_image(image, image_name)
+        im = Image.fromarray(image)
+        im.save(image_name)
+        # save_image(image, image_name)
 
     def save_results(self, data: dict, options: BaseAugumentation):
         for key, values in data.items():
@@ -156,9 +164,10 @@ class Setup:
             df["noise_percent"] = df["noise_percent"].apply(lambda numb: round(numb / 1024, 2))
         elif isinstance(options, NoiseAugumentation):
             df["noise_percent"] = df["noise_percent"].apply(lambda numb: round(numb / 100, 2))
-
+        path = f"./{self.config.model.value}-{self.config.tag}/{options.name}/dataframes/"
+        # os.makedirs( path ,exist_ok=True)
         df.to_pickle(
-            f"./{self.config.model.value}-{self.config.tag}/{options.name}/dataframes/id_{index}.pickle")
+            f"{path}/rate_{index}.pickle")
 
 
 def converter(tensor): return tensor.detach().cpu().numpy()
@@ -186,11 +195,12 @@ class Worker:
                 ])
 
     @staticmethod
-    def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: int, image_id: int):
+    def test_model_with_data_loader(model, data_loader: DataLoader, mask_intensity: list, converted_ids: list):
         set_workstation("cuda:0")
         storage = []
         model.eval()
         model.to("cuda:0")
+        ind = 0
         for _, (inputs, targets) in enumerate(data_loader):
             inputs, targets = inputs.to("cuda:0"), targets.to("cuda:0")
             logits = model(inputs)
@@ -198,13 +208,14 @@ class Worker:
             predicted = converter(predicted)
             logits = converter(logits)
             features = get_features(model._modules['1'], inputs)
-            for index in logits.shape[0]:
+            for index in range(logits.shape[0]):
                 storage.append([
-                    f"{image_id}_{round(mask_intensity, 2)}", targets[index],
+                    converted_ids[ind], converter(targets[index]).item(),
                     predicted[index],
-                    mask_intensity,
+                    mask_intensity[ind],
                     logits[index],
                     converter(features[index]),
-                    100*mask_intensity
+                    100*mask_intensity[ind]
                 ])
+                ind+=1
         return storage
