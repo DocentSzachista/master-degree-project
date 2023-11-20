@@ -72,4 +72,4 @@ class MahalanobisDistance:
         x = np.stack(x).squeeze().tolist()
         res = np.stack([np.sqrt(self.dist[index].mahalanobis(x)) for index in self.classes], axis=0)
         res = res.min(axis=0)
-        return -res
+        return res

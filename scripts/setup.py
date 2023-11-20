@@ -192,17 +192,17 @@ class Setup:
             df.to_pickle(
                 f"./{self.config.model.value}-{self.config.tag}/{options.name}/dataframes/id_{key}.pickle")
 
-    def save_results_gpu(self, data: list, options: BaseAugumentation, index: int):
+    def save_results_gpu(self, data: list, options: BaseAugumentation, index: int, original_label: int):
 
         df = pd.DataFrame(data, columns=self.columns)
         if isinstance(options, NoiseAugumentation):
             df["noise_percent"] = df["noise_percent"].apply(lambda numb: round(numb / 1024, 2))
         elif isinstance(options, NoiseAugumentation):
             df["noise_percent"] = df["noise_percent"].apply(lambda numb: round(numb / 100, 2))
-        path = f"./{self.config.model.value}-{self.config.tag}/{options.name}/dataframes/"
-        # os.makedirs( path ,exist_ok=True)
+        path = f"./{self.config.model.value}-{self.config.tag}/{options.name}/dataframes/{original_label}"
+        os.makedirs( path ,exist_ok=True)
         df.to_pickle(
-            f"{path}/rate_{index}.pickle")
+            f"{path}/{index}.pickle")
 
 
 def converter(tensor): return tensor.detach().cpu().numpy()

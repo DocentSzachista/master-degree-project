@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader
 import torch
 from scripts.augumentations.noise_creation import apply_noise_to_image
 from scripts.augumentations.mixup import mixup_criterion
-from scripts.plots import confussion
 
 if __name__ == '__main__':
 
@@ -38,16 +37,15 @@ if __name__ == '__main__':
         copy_cifar = copy.deepcopy(cifar)
     for augumentation in setup.config.augumentations:
         iterator = augumentation.make_iterator()
-        for rate in iterator:
+        for image_id in indexes:
             augumented_class = []
             converted_ids = []
-                # augumented_class.append(
-                #     mixup_criterion( rate, augumentation.chosen_image.T, starting_image, 
-                #         ))
-            for image_id in indexes:
-                starting_image = cifar.data[image_id]
-                processed_image = apply_noise_to_image(
-                    setup.shuffled_indexes, starting_image, setup.mask.numpy(), rate)
+            starting_image = cifar.data[image_id]
+                # processed_image = apply_noise_to_image(
+                #     setup.shuffled_indexes, starting_image, setup.mask.numpy(), rate)
+            for rate in iterator:
+                processed_image= mixup_criterion( rate, augumentation.chosen_image, starting_image, 
+                        )
                 augumented_class.append(processed_image)
                 converted_ids.append(f"{image_id}_{rate}")
                 if setup.config.save_preprocessing:
@@ -57,7 +55,6 @@ if __name__ == '__main__':
             # break
             labels = cifar.targets #[cifar.targets[image_id] for i in range(0, len(iterator))]
             stack = np.array(augumented_class)
-
     #         # images, labels = setup.modify_dataset(augumentation, cifar, rate, indexes=setup.config.chosen_images)
     #         # stack = np.vstack(images)
             copy_cifar.data = stack
@@ -68,13 +65,12 @@ if __name__ == '__main__':
     #         # Worker.test_model_data_loader(model, images, labels, rate, storage, indexes=indexes)
             to_save = Worker.test_model_with_data_loader(
                 model=model, data_loader=data_loader, 
-                mask_intensity=rate, converted_ids=converted_ids
+                mask_intensity=iterator, converted_ids=converted_ids
             )
-            setup.save_results_gpu(to_save, augumentation,  rate)
+            setup.save_results_gpu(to_save, augumentation, image_id, labels[image_id])
 
 
         # setup.save_results(storage, augumentation)
         # storage = {k: [] for k in storage.keys()}
 
     # run()
-    # confussion.run(setup.config, {"small": 100})

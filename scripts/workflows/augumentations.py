@@ -28,5 +28,5 @@ class MixupAugumentation(BaseAugumentation):
             ToTensorV2()
          ])
         super().__init__(config)
-        img = Image.open(config.get("chosen_image"))
-        self.chosen_image = transform(image=np.array(img))["image"].float()/255.0
+        self.chosen_image = np.asarray(Image.open(config.get("chosen_image")))
+        # self.chosen_image = transform(image=np.array(img))["image"].float()/255.0
